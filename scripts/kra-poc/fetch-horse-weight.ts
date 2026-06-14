@@ -1,4 +1,5 @@
 import { runKraPoc } from "../../lib/kra/poc.ts";
+import { toKraDate } from "../../lib/kra/date.ts";
 
 // TODO: 실제 endpoint 확인 필요. 현재 URL은 실행 구조 검증을 위한 자리표시자입니다.
 const ENDPOINT = "https://apis.data.go.kr/B551015/API8_2/horseWeight";
@@ -8,9 +9,9 @@ async function main() {
     label: "마체중 PoC",
     endpoint: ENDPOINT,
     params: {
-      // 입력 예시: TARGET_DATE=20260614 RACECOURSE=SEOUL RACE_NO=7
+      // 입력 예시: TARGET_DATE=2026-06-14 RACECOURSE=SEOUL RACE_NO=7
       meet: process.env.RACECOURSE ?? "SEOUL",
-      rc_date: process.env.TARGET_DATE ?? "20260614",
+      rc_date: toKraDate(process.env.TARGET_DATE ?? "2026-06-14"),
       rc_no: process.env.RACE_NO ?? "7",
       _type: "json",
     },

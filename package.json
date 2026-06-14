@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "test": "node --experimental-strip-types --test lib/**/*.test.ts",
     "kra:poc:race-info": "node --experimental-strip-types scripts/kra-poc/fetch-race-info.ts",
     "kra:poc:results": "node --experimental-strip-types scripts/kra-poc/fetch-race-results.ts",
     "kra:poc:dividends": "node --experimental-strip-types scripts/kra-poc/fetch-dividends.ts",

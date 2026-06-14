@@ -70,11 +70,18 @@ Node 스크립트는 `.env.local`을 자동으로 읽지 않으므로 셸 환경
 
 ```bash
 export KRA_API_KEY="발급받은-키"
-TARGET_DATE=20260614 RACECOURSE=SEOUL RACE_NO=1 npm run kra:poc:race-info
+TARGET_DATE=2026-06-14 RACECOURSE=SEOUL RACE_NO=1 npm run kra:poc:race-info
 npm run kra:poc:results
 npm run kra:poc:dividends
 npm run kra:poc:horse-weight
 ```
+
+### 날짜 형식
+
+- GitHub Actions의 `target_date` 입력은 사람이 읽고 검수하기 쉬운 `YYYY-MM-DD` 형식입니다.
+- KRA API 요청 직전에는 날짜 변환 유틸이 값을 `YYYYMMDD` 형식으로 바꿉니다.
+- 터미널에서 직접 실행할 때 이미 `YYYYMMDD`를 입력한 경우에도 안전하게 처리합니다.
+- 형식이 다르거나 달력에 존재하지 않는 날짜는 외부 API를 호출하기 전에 명확한 오류를 냅니다.
 
 각 요청은 실패 시 10초, 30초, 60초 간격으로 최대 3회 재시도합니다. 현재 결과는
 검증을 위해 콘솔에만 출력하고 Supabase에는 저장하지 않습니다.
@@ -88,6 +95,9 @@ npm run kra:poc:horse-weight
 
 GitHub Actions는 정확한 시작 시각을 보장하지 않으므로 이후 화면에는 예약 시각 대신
 마지막 성공 시각을 표시합니다. 현재는 수동 실행만 활성화해 과도한 자동 호출을 막습니다.
+
+별도의 **CI** workflow는 Pull Request마다 `npm install`, `npm run lint`, 날짜 변환 테스트,
+`npm run build`를 실행합니다. 품질 검증만 수행하며 Vercel 또는 다른 환경으로 배포하지 않습니다.
 
 ## 현재 구현된 것
 

@@ -59,8 +59,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
+      # package-lock.json이 생성되기 전까지 npm install을 사용합니다.
+      # lock 파일이 추가되면 재현 가능한 설치를 위해 npm ci로 교체해야 합니다.
       - name: Install dependencies
         run: npm install
 
