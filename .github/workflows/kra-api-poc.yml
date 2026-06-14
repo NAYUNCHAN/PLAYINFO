@@ -1,0 +1,68 @@
+name: KRA API PoC
+
+# 실제 endpoint와 응답 필드를 검증하기 위한 수동 실행 전용 workflow입니다.
+# 예약 수집이나 배포를 수행하지 않으며, 저장소 Secret의 값은 어떤 단계에서도 출력하지 않습니다.
+on:
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 조사할 KRA API
+        required: true
+        type: choice
+        options:
+          - race_info
+          - race_results
+          - dividends
+          - horse_weight
+          - cancellations
+          - jockey_changes
+      target_date:
+        description: 대상 날짜(YYYY-MM-DD)
+        required: true
+        type: string
+      racecourse:
+        description: 대상 경마장
+        required: true
+        type: choice
+        options:
+          - SEOUL
+          - BUSAN
+          - JEJU
+      race_no:
+        description: 경주번호(선택)
+        required: false
+        type: string
+
+jobs:
+  run-poc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+      KRA_API_BASE_URL: ${{ secrets.KRA_API_BASE_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm install
+
+      # 셸 배열을 사용해 선택 입력인 race_no가 비어 있을 때 불완전한 인자를 넘기지 않습니다.
+      # 명령 자체에는 Secret 변수를 넣지 않으므로 Actions 로그에 인증 값이 표시되지 않습니다.
+      - name: Run selected KRA PoC
+        shell: bash
+        run: |
+          args=(
+            --job "${{ inputs.job_type }}"
+            --date "${{ inputs.target_date }}"
+            --racecourse "${{ inputs.racecourse }}"
+          )
+          if [[ -n "${{ inputs.race_no }}" ]]; then
+            args+=(--race-no "${{ inputs.race_no }}")
+          fi
+          npm run poc:kra -- "${args[@]}"
