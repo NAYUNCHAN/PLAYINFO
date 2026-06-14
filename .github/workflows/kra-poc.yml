@@ -1,0 +1,93 @@
+name: KRA PoC manual runner
+
+# 이 workflow는 Vercel/Supabase와 함께 무료 인프라로 운영할 수집 실행 진입점입니다.
+# GitHub Actions의 예약 작업은 정확한 실행 시각을 보장하지 않습니다.
+# 따라서 제품 화면에는 예정 시각이 아니라 마지막 성공 시각을 표시해야 합니다.
+# 향후 관리자 화면의 수동 재수집 기능도 이 workflow_dispatch를 호출하게 됩니다.
+on:
+  workflow_dispatch:
+    inputs:
+      job_type:
+        description: 실행할 수집 작업
+        required: true
+        type: choice
+        options:
+          - race_schedule
+          - entries
+          - results
+          - dividends
+          - horse_weight
+          - cleanup
+      target_date:
+        description: 대상 날짜(YYYY-MM-DD)
+        required: true
+        type: string
+      racecourse:
+        description: 대상 경마장
+        required: true
+        default: ALL
+        type: choice
+        options:
+          - SEOUL
+          - BUSAN
+          - JEJU
+          - ALL
+      race_no:
+        description: 경주 번호(선택)
+        required: false
+        type: string
+      triggered_by:
+        description: admin_user_id 또는 manual
+        required: true
+        default: manual
+        type: string
+
+jobs:
+  run-kra-poc:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
+      TARGET_DATE: ${{ inputs.target_date }}
+      RACECOURSE: ${{ inputs.racecourse }}
+      RACE_NO: ${{ inputs.race_no }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      # 아직 모든 job_type의 수집기가 구현된 것은 아닙니다. 이 분기는 각 작업이
+      # 완성되는 순서대로 npm script를 연결할 수 있도록 실행 계약을 먼저 정의합니다.
+      - name: Run selected PoC
+        shell: bash
+        run: |
+          echo "triggered_by=${{ inputs.triggered_by }}"
+          case "${{ inputs.job_type }}" in
+            race_schedule|entries)
+              npm run kra:poc:race-info
+              ;;
+            results)
+              npm run kra:poc:results
+              ;;
+            dividends)
+              npm run kra:poc:dividends
+              ;;
+            horse_weight)
+              npm run kra:poc:horse-weight
+              ;;
+            cleanup)
+              echo "cleanup 수집기는 다음 단계에서 구현합니다."
+              ;;
+            *)
+              echo "지원하지 않는 job_type입니다." >&2
+              exit 1
+              ;;
+          esac
