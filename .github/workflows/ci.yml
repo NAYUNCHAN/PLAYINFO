@@ -1,0 +1,36 @@
+name: CI
+
+# 대표가 로컬 환경에서 직접 검증하기 어려우므로 GitHub가 같은 명령을 대신 실행합니다.
+# 이 workflow는 코드 품질과 production build만 확인하며 배포 작업은 수행하지 않습니다.
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # 현재 Codex 환경의 npm registry 접근 제한으로 package-lock.json을 만들지 못했습니다.
+      # lock 파일이 추가되기 전에는 npm install을 사용하고, 생성 후 npm ci로 교체합니다.
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test date conversion
+        run: npm test
+
+      - name: Build
+        run: npm run build
