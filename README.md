@@ -54,20 +54,26 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_URL` | 브라우저와 서버가 사용할 Supabase 프로젝트 URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 브라우저에서 사용할 공개 익명 키 |
 | `SUPABASE_SERVICE_ROLE_KEY` | 신뢰된 서버 수집기만 사용할 관리자 키 |
-| `KRA_API_KEY` | KRA 공공데이터 API 인증 키 |
+| `KRA_RACE_INFO_API_KEY` | 경주정보 서비스 인증 키 |
+| `KRA_RACE_DETAIL_RESULT_API_KEY` | 경주별 상세성적표 서비스 인증 키 |
+| `KRA_CANCELLATION_API_KEY` | 출전취소 서비스 인증 키 |
+| `KRA_JOCKEY_CHANGE_API_KEY` | 기수변경 서비스 인증 키 |
+| `KRA_API_BASE_URL` | KRA API 공통 URL (`http://apis.data.go.kr`) |
 | `GITHUB_TOKEN` | 향후 Actions 수동 호출에 사용할 GitHub 토큰 |
 | `GITHUB_OWNER` | GitHub 저장소 소유자 |
 | `GITHUB_REPO` | GitHub 저장소 이름 |
 
-`SUPABASE_SERVICE_ROLE_KEY`와 `KRA_API_KEY`는 브라우저 코드에 노출하지 않습니다.
-특히 Service Role Key에는 `NEXT_PUBLIC_` 접두사를 붙이면 안 됩니다. GitHub Actions에서는
-저장소의 **Settings → Secrets and variables → Actions**에 `KRA_API_KEY`를 등록합니다.
+`SUPABASE_SERVICE_ROLE_KEY`와 모든 KRA 서비스 인증 키는 브라우저 코드에 노출하지
+않습니다. 특히 Service Role Key에는 `NEXT_PUBLIC_` 접두사를 붙이면 안 됩니다.
+공공데이터포털은 서비스별로 다른 키를 발급할 수 있으므로 단일 공용 키 구조를 사용하지
+않고, 위 네 인증 키와 `KRA_API_BASE_URL`을 GitHub Actions Secret으로 각각 등록합니다.
 
 ## KRA API PoC 실행
 
 Node 스크립트는 `.env.local`을 자동으로 읽지 않으므로 셸 또는 GitHub Actions Secret으로
-`KRA_API_KEY`와 `KRA_API_BASE_URL`을 전달합니다. endpoint별 확인 상태는 PoC catalog에서
-확인하며, 후보 경로는 승인 화면과 대조하기 전 확정된 것으로 간주하지 않습니다.
+job_type에 대응하는 서비스별 인증 키와 `KRA_API_BASE_URL`을 전달합니다. endpoint별
+확인 상태와 사용할 환경변수 이름은 PoC catalog에서 확인하며, 후보 경로는 승인 화면과
+대조하기 전 확정된 것으로 간주하지 않습니다.
 
 ```bash
 npm run poc:kra -- --job race_info --date 2026-06-14 --racecourse SEOUL

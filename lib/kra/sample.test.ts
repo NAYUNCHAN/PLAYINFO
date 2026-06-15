@@ -31,8 +31,8 @@ test("경로 이탈 문자가 포함된 경마장을 거부한다", () => {
 test("중첩된 인증 관련 필드를 샘플에서 제거한다", () => {
   assert.deepEqual(
     removeSecretFields({
-      data: [{ hrNo: "001", serviceKey: "example-secret" }],
-      authorization: "example-secret",
+      data: [{ hrNo: "001", serviceKey: "dummy-value" }],
+      authorization: "dummy-value",
     }),
     { data: [{ hrNo: "001" }] },
   );

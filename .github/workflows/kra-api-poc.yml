@@ -38,8 +38,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      KRA_API_KEY: ${{ secrets.KRA_API_KEY }}
       KRA_API_BASE_URL: ${{ secrets.KRA_API_BASE_URL }}
+      KRA_RACE_INFO_API_KEY: ${{ secrets.KRA_RACE_INFO_API_KEY }}
+      KRA_RACE_DETAIL_RESULT_API_KEY: ${{ secrets.KRA_RACE_DETAIL_RESULT_API_KEY }}
+      KRA_CANCELLATION_API_KEY: ${{ secrets.KRA_CANCELLATION_API_KEY }}
+      KRA_JOCKEY_CHANGE_API_KEY: ${{ secrets.KRA_JOCKEY_CHANGE_API_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4

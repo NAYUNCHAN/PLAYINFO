@@ -10,10 +10,17 @@ export const KRA_JOB_TYPES = [
 
 export type KraJobType = (typeof KRA_JOB_TYPES)[number];
 
+export type KraApiKeyEnvName =
+  | "KRA_RACE_INFO_API_KEY"
+  | "KRA_RACE_DETAIL_RESULT_API_KEY"
+  | "KRA_CANCELLATION_API_KEY"
+  | "KRA_JOCKEY_CHANGE_API_KEY";
+
 export interface KraEndpointDefinition {
   jobType: KraJobType;
   endpointName: string;
   path: string;
+  apiKeyEnvName: KraApiKeyEnvName;
   sampleDirectory: string;
   verificationStatus: "candidate" | "confirmed";
   notes: string;
@@ -31,6 +38,7 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "race_info",
     endpointName: "경주정보",
     path: "/B551015/API8_2/raceInfo",
+    apiKeyEnvName: "KRA_RACE_INFO_API_KEY",
     sampleDirectory: "race-info",
     verificationStatus: "candidate",
     notes: "기존 PoC 경로 후보이며 활용신청 후 공식 명세 대조가 필요합니다.",
@@ -39,6 +47,7 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "race_schedule",
     endpointName: "경주정보",
     path: "/B551015/API8_2/raceInfo",
+    apiKeyEnvName: "KRA_RACE_INFO_API_KEY",
     sampleDirectory: "race-info",
     verificationStatus: "candidate",
     notes: "race_info의 별칭입니다.",
@@ -47,6 +56,7 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "race_results",
     endpointName: "경주결과",
     path: "/B551015/racedetailresult/getracedetailresult",
+    apiKeyEnvName: "KRA_RACE_DETAIL_RESULT_API_KEY",
     sampleDirectory: "race-results",
     verificationStatus: "candidate",
     notes:
@@ -56,6 +66,9 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "dividends",
     endpointName: "확정배당",
     path: "/B551015/API8_2/dividend",
+    // 독립 endpoint가 아직 확정되지 않아 현재 경주정보 서비스 키를 임시 사용합니다.
+    // 실제 PoC에서 다른 서비스로 확인되면 catalog의 이 값만 변경하면 됩니다.
+    apiKeyEnvName: "KRA_RACE_INFO_API_KEY",
     sampleDirectory: "dividends",
     verificationStatus: "candidate",
     notes: "독립 API인지 경주정보 응답 필드인지 추가 확인이 필요합니다.",
@@ -64,6 +77,9 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "horse_weight",
     endpointName: "마체중",
     path: "/B551015/API8_2/horseWeight",
+    // 상세성적표에 마체중 필드가 포함된다는 공식 설명을 기준으로 결과 상세 키를
+    // 우선 지정합니다. 경주정보 endpoint로 확정되면 이 매핑을 경주정보 키로 바꿉니다.
+    apiKeyEnvName: "KRA_RACE_DETAIL_RESULT_API_KEY",
     sampleDirectory: "horse-weight",
     verificationStatus: "candidate",
     notes: "독립 API인지 상세성적표 필드인지 추가 확인이 필요합니다.",
@@ -72,6 +88,7 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "cancellations",
     endpointName: "출전취소",
     path: "/B551015/API26_1/raceHorseCancelInfo_1",
+    apiKeyEnvName: "KRA_CANCELLATION_API_KEY",
     sampleDirectory: "cancellations",
     verificationStatus: "candidate",
     notes: "공식 제공 데이터는 확인했으며 활용신청 화면에서 서비스 경로를 재확인합니다.",
@@ -80,6 +97,7 @@ const ENDPOINT_CATALOG: Record<KraJobType, KraEndpointDefinition> = {
     jobType: "jockey_changes",
     endpointName: "기수변경",
     path: "/B551015/API20_1/jockeyChangeInfo_1",
+    apiKeyEnvName: "KRA_JOCKEY_CHANGE_API_KEY",
     sampleDirectory: "jockey-changes",
     verificationStatus: "candidate",
     notes: "공식 제공 데이터는 확인했으며 활용신청 화면에서 서비스 경로를 재확인합니다.",

@@ -53,7 +53,9 @@ export async function fetchKraJson({
   targetDate,
   params,
 }: KraRequest): Promise<unknown> {
-  const apiKey = getRequiredEnvironmentVariable("KRA_API_KEY");
+  // 공공데이터포털은 서비스 활용신청별로 다른 인증키를 발급할 수 있습니다.
+  // endpoint catalog가 지정한 환경변수만 읽어 작업 종류와 인증키가 섞이지 않게 합니다.
+  const apiKey = getRequiredEnvironmentVariable(endpoint.apiKeyEnvName);
   const baseUrl = getRequiredEnvironmentVariable("KRA_API_BASE_URL");
   const url = new URL(endpoint.path, baseUrl);
 
