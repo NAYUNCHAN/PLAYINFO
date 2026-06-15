@@ -53,7 +53,7 @@ jobs:
           node-version: 22
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # 셸 배열을 사용해 선택 입력인 race_no가 비어 있을 때 불완전한 인자를 넘기지 않습니다.
       # 명령 자체에는 Secret 변수를 넣지 않으므로 Actions 로그에 인증 값이 표시되지 않습니다.

@@ -3,6 +3,11 @@ const DEFAULT_RETRY_DELAYS_MS = [10_000, 30_000, 60_000] as const;
 const sleep = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
+export interface RetryOptions {
+  retryDelaysMs?: readonly number[];
+  shouldRetry?: (error: unknown) => boolean;
+}
+
 /**
  * 일시적인 네트워크 장애나 공공 API의 순간적인 과부하를 견디기 위해 작업을 재시도합니다.
  *
@@ -15,11 +20,14 @@ const sleep = (milliseconds: number) =>
  * 각 시도 번호와 대기 시간을 출력해 관리자가 실패 지점을 쉽게 추적할 수 있게 합니다.
  *
  * @param operation 최초 실행 및 재시도 때마다 새로 호출할 비동기 작업
- * @param retryDelaysMs 테스트 또는 특수 작업에서만 교체할 재시도 대기 시간 목록
+ * @param options 대기 시간과 오류별 재시도 여부를 정하는 선택 옵션
  */
 export async function withRetry<T>(
   operation: () => Promise<T>,
-  retryDelaysMs: readonly number[] = DEFAULT_RETRY_DELAYS_MS,
+  {
+    retryDelaysMs = DEFAULT_RETRY_DELAYS_MS,
+    shouldRetry = () => true,
+  }: RetryOptions = {},
 ): Promise<T> {
   let lastError: unknown;
 
@@ -28,6 +36,13 @@ export async function withRetry<T>(
       return await operation();
     } catch (error) {
       lastError = error;
+
+      // 잘못된 요청이나 인증 실패처럼 다시 시도해도 결과가 달라지지 않는 오류는
+      // 대기하지 않고 원래 오류를 즉시 전달합니다. 이 분기가 불필요한 API 호출과
+      // GitHub Actions 실행 시간 낭비를 막습니다.
+      if (!shouldRetry(error)) {
+        throw error;
+      }
 
       if (attempt > retryDelaysMs.length) {
         break;
@@ -41,8 +56,12 @@ export async function withRetry<T>(
     }
   }
 
-  throw new Error(
-    `KRA API 요청이 최초 요청과 최대 ${retryDelaysMs.length}회 재시도 후에도 실패했습니다.`,
-    { cause: lastError },
-  );
+  // 마지막 오류를 그대로 전달해야 호출자가 HTTP status와 안전하게 정제된 문맥을
+  // 유지할 수 있습니다. Error가 아닌 값이 throw된 예외적인 경우에만 감싸서 전달합니다.
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+  throw new Error("KRA API 요청이 모든 재시도 후에도 실패했습니다.", {
+    cause: lastError,
+  });
 }

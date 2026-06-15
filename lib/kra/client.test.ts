@@ -3,7 +3,11 @@ import test from "node:test";
 
 import type { KraApiKeyEnvName } from "./catalog.ts";
 import { getKraEndpoint } from "./catalog.ts";
-import { fetchKraJson } from "./client.ts";
+import {
+  fetchKraJson,
+  isNonRetryableHttpStatus,
+  isRetryableHttpStatus,
+} from "./client.ts";
 
 const API_KEY_ENV_NAMES: KraApiKeyEnvName[] = [
   "KRA_RACE_INFO_API_KEY",
@@ -96,6 +100,135 @@ test("JSON 파싱 실패 오류에 인증키와 전체 URL을 포함하지 않�
       },
     );
   } finally {
+    globalThis.fetch = originalFetch;
+    restoreEnvironment();
+  }
+});
+
+const NON_RETRYABLE_STATUSES = [400, 401, 403, 404, 422] as const;
+const RETRYABLE_STATUSES = [408, 429, 500, 503] as const;
+
+for (const status of NON_RETRYABLE_STATUSES) {
+  test(`${status} HTTP 오류는 재시도하지 않고 즉시 실패한다`, async () => {
+    const restoreEnvironment = preserveEnvironment([
+      ...API_KEY_ENV_NAMES,
+      "KRA_API_BASE_URL",
+    ]);
+    const originalFetch = globalThis.fetch;
+    const dummyKey = "dummy-key-value";
+    let fetchCount = 0;
+    process.env.KRA_RACE_INFO_API_KEY = dummyKey;
+    process.env.KRA_API_BASE_URL = "http://example.invalid";
+    globalThis.fetch = async () => {
+      fetchCount += 1;
+      return new Response(null, { status });
+    };
+
+    try {
+      await assert.rejects(
+        fetchKraJson(
+          {
+            endpoint: getKraEndpoint("race_info"),
+            jobType: "race_info",
+            targetDate: "2026-06-14",
+            params: {},
+          },
+          { retryDelaysMs: [0, 0, 0] },
+        ),
+        (error: Error) => {
+          assert.equal(
+            error.message,
+            `KRA API request failed: status=${status}, endpoint=경주정보, job_type=race_info, target_date=2026-06-14`,
+          );
+          assert.doesNotMatch(error.message, new RegExp(dummyKey));
+          assert.doesNotMatch(error.message, /serviceKey/);
+          assert.doesNotMatch(error.message, /example\.invalid/);
+          return true;
+        },
+      );
+      assert.equal(fetchCount, 1);
+      assert.equal(isNonRetryableHttpStatus(status), true);
+      assert.equal(isRetryableHttpStatus(status), false);
+    } finally {
+      globalThis.fetch = originalFetch;
+      restoreEnvironment();
+    }
+  });
+}
+
+for (const status of RETRYABLE_STATUSES) {
+  test(`${status} HTTP 오류는 최대 3회 재시도한다`, async () => {
+    const restoreEnvironment = preserveEnvironment([
+      ...API_KEY_ENV_NAMES,
+      "KRA_API_BASE_URL",
+    ]);
+    const originalFetch = globalThis.fetch;
+    const originalWarn = console.warn;
+    let fetchCount = 0;
+    process.env.KRA_RACE_INFO_API_KEY = "dummy-key-value";
+    process.env.KRA_API_BASE_URL = "http://example.invalid";
+    globalThis.fetch = async () => {
+      fetchCount += 1;
+      return new Response(null, { status });
+    };
+    console.warn = () => {};
+
+    try {
+      await assert.rejects(
+        fetchKraJson(
+          {
+            endpoint: getKraEndpoint("race_info"),
+            jobType: "race_info",
+            targetDate: "2026-06-14",
+            params: {},
+          },
+          { retryDelaysMs: [0, 0, 0] },
+        ),
+        new RegExp(`status=${status}`),
+      );
+      assert.equal(fetchCount, 4);
+      assert.equal(isRetryableHttpStatus(status), true);
+      assert.equal(isNonRetryableHttpStatus(status), false);
+    } finally {
+      console.warn = originalWarn;
+      globalThis.fetch = originalFetch;
+      restoreEnvironment();
+    }
+  });
+}
+
+test("fetch 네트워크 오류는 기존 정책에 따라 최대 3회 재시도한다", async () => {
+  const restoreEnvironment = preserveEnvironment([
+    ...API_KEY_ENV_NAMES,
+    "KRA_API_BASE_URL",
+  ]);
+  const originalFetch = globalThis.fetch;
+  const originalWarn = console.warn;
+  let fetchCount = 0;
+  process.env.KRA_RACE_INFO_API_KEY = "dummy-key-value";
+  process.env.KRA_API_BASE_URL = "http://example.invalid";
+  globalThis.fetch = async () => {
+    fetchCount += 1;
+    throw new TypeError("dummy network failure");
+  };
+  console.warn = () => {};
+
+  try {
+    await assert.rejects(
+      fetchKraJson(
+        {
+          endpoint: getKraEndpoint("race_info"),
+          jobType: "race_info",
+          targetDate: "2026-06-14",
+          params: {},
+        },
+        { retryDelaysMs: [0, 0, 0] },
+      ),
+      /dummy network failure/,
+    );
+    assert.equal(fetchCount, 4);
+  } finally {
+    console.warn = originalWarn;
     globalThis.fetch = originalFetch;
     restoreEnvironment();
   }

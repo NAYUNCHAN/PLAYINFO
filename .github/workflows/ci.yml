@@ -21,10 +21,9 @@ jobs:
         with:
           node-version: 22
 
-      # 현재 Codex 환경의 npm registry 접근 제한으로 package-lock.json을 만들지 못했습니다.
-      # lock 파일이 추가되기 전에는 npm install을 사용하고, 생성 후 npm ci로 교체합니다.
+      # 커밋된 lock 파일을 기준으로 동일한 의존성 버전을 재현합니다.
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Lint
         run: npm run lint

@@ -1,11 +1,29 @@
 import type { KraEndpointDefinition } from "./catalog.ts";
 import { withRetry } from "./retry.ts";
 
+const NON_RETRYABLE_HTTP_STATUSES = new Set([400, 401, 403, 404, 422]);
+
+export function isRetryableHttpStatus(status: number): boolean {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+export function isNonRetryableHttpStatus(status: number): boolean {
+  return NON_RETRYABLE_HTTP_STATUSES.has(status);
+}
+
 export interface KraRequest {
   endpoint: KraEndpointDefinition;
   jobType: string;
   targetDate: string;
   params: Record<string, string | undefined>;
+}
+
+export interface KraClientOptions {
+  /**
+   * 운영에서는 기본 10초, 30초, 60초를 사용합니다.
+   * 단위 테스트에서는 실제 대기 없이 재시도 횟수를 검증하기 위해 0ms 배열을 전달합니다.
+   */
+  retryDelaysMs?: readonly number[];
 }
 
 export class KraApiError extends Error {
@@ -52,7 +70,7 @@ export async function fetchKraJson({
   jobType,
   targetDate,
   params,
-}: KraRequest): Promise<unknown> {
+}: KraRequest, options: KraClientOptions = {}): Promise<unknown> {
   // 공공데이터포털은 서비스 활용신청별로 다른 인증키를 발급할 수 있습니다.
   // endpoint catalog가 지정한 환경변수만 읽어 작업 종류와 인증키가 섞이지 않게 합니다.
   const apiKey = getRequiredEnvironmentVariable(endpoint.apiKeyEnvName);
@@ -69,24 +87,37 @@ export async function fetchKraJson({
     }
   });
 
-  const response = await withRetry(async () => {
-    const result = await fetch(url, {
-      headers: { Accept: "application/json" },
-    });
+  const response = await withRetry(
+    async () => {
+      const result = await fetch(url, {
+        headers: { Accept: "application/json" },
+      });
 
-    if (!result.ok) {
-      throw new KraApiError(
-        `KRA API request failed: status=${result.status}, endpoint=${endpoint.endpointName}, job_type=${jobType}, target_date=${targetDate}`,
-        {
-          status: result.status,
-          endpointName: endpoint.endpointName,
-          jobType,
-          targetDate,
-        },
-      );
-    }
-    return result;
-  });
+      if (!result.ok) {
+        throw new KraApiError(
+          `KRA API request failed: status=${result.status}, endpoint=${endpoint.endpointName}, job_type=${jobType}, target_date=${targetDate}`,
+          {
+            status: result.status,
+            endpointName: endpoint.endpointName,
+            jobType,
+            targetDate,
+          },
+        );
+      }
+      return result;
+    },
+    {
+      retryDelaysMs: options.retryDelaysMs,
+      // KraApiError는 HTTP response를 받은 실패입니다. 명시된 일시 장애 status만
+      // 재시도하고 나머지는 즉시 실패합니다. fetch 자체가 throw한 네트워크 오류는
+      // KraApiError가 아니므로 기존 10초, 30초, 60초 정책으로 재시도합니다.
+      shouldRetry: (error) =>
+        error instanceof KraApiError
+          ? error.details.status !== undefined &&
+            isRetryableHttpStatus(error.details.status)
+          : true,
+    },
+  );
 
   try {
     return await response.json();
