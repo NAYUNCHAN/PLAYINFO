@@ -96,13 +96,13 @@ npm run poc:kra -- --job horse_weight --date 2026-06-14 --racecourse SEOUL --rac
 
 1. GitHub 저장소의 **Actions** 탭에서 **KRA API PoC**를 선택합니다.
 2. **Run workflow**를 누릅니다.
-3. `job_type`, `target_date`, `racecourse`, 선택 사항인 `race_no`, `triggered_by`를 입력합니다.
+3. `job_type`, `target_date`, `racecourse`, 선택 사항인 `race_no`를 입력합니다.
 4. 실행 로그에서 입력 조건, 재시도 횟수와 오류 원인을 확인합니다.
 
 GitHub Actions는 정확한 시작 시각을 보장하지 않으므로 이후 화면에는 예약 시각 대신
 마지막 성공 시각을 표시합니다. 현재는 수동 실행만 활성화해 과도한 자동 호출을 막습니다.
 
-별도의 **CI** workflow는 Pull Request마다 `npm install`, `npm run lint`, 날짜 변환 테스트,
+별도의 **CI** workflow는 Pull Request마다 `npm ci`, `npm run lint`, 날짜 변환 테스트,
 `npm run build`를 실행합니다. 품질 검증만 수행하며 Vercel 또는 다른 환경으로 배포하지 않습니다.
 
 ## 현재 구현된 것
